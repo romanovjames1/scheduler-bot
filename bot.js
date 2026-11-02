@@ -316,93 +316,6 @@ bot.command("weekly", async (ctx) => {
 
   await ctx.reply(message, { parse_mode: "HTML" });
 });
-// -------------------------------------------------------------
-// DAILY AUTOMATED REMINDER (Fetches Latest Subject Homework)
-// -------------------------------------------------------------
-async function sendTomorrowReminder() {
-  const days = [
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-  ];
-  const tomorrowDate = new Date();
-  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-  const tomorrowName = days[tomorrowDate.getDay()];
-
-  const { data: db } = await getDatabaseFromChannel();
-  const tomorrowSubjects = db.schedule[tomorrowName] || [];
-
-  if (tomorrowSubjects.length === 0) {
-    console.log(`No subjects scheduled for tomorrow (${tomorrowName}).`);
-    return;
-  }
-
-  let message = `📅 <b>Tomorrow's Schedule (${tomorrowName})</b>\n\n`;
-
-  tomorrowSubjects.forEach((item, index) => {
-    const subjKey = item.subject.toLowerCase();
-    const homework = db.homeworks[subjKey];
-
-    message += `<b>${index + 1}. ${item.subject}</b>\n`;
-    message += `⏰ ${item.start_time} - ${item.end_time}\n`;
-    if (homework && homework.text) {
-      message += `📝 <b>Homework:</b> ${homework.text}\n`;
-    } else {
-      message += `📝 <b>Homework:</b> None assigned\n`;
-    }
-    message += `\n`;
-  });
-
-  try {
-    // 1. Send & Pin Schedule Summary
-    const sentMsg = await bot.api.sendMessage(GROUP_CHAT_ID, message, {
-      parse_mode: "HTML",
-    });
-    await bot.api.pinChatMessage(GROUP_CHAT_ID, sentMsg.message_id);
-
-    // 2. Send Homework Photo Albums if assigned for tomorrow's subjects
-    for (const item of tomorrowSubjects) {
-      const subjKey = item.subject.toLowerCase();
-      const photos = db.homeworks[subjKey]?.photo_file_ids || [];
-
-      if (photos.length === 1) {
-        try {
-          await bot.api.sendPhoto(GROUP_CHAT_ID, photos[0], {
-            caption: `📸 Homework picture for <b>${item.subject}</b>`,
-            parse_mode: "HTML",
-          });
-        } catch (err) {
-          console.error(
-            `Failed to send single photo for ${item.subject}:`,
-            err,
-          );
-        }
-      } else if (photos.length > 1) {
-        try {
-          const mediaGroup = photos.map((fileId, idx) => ({
-            type: "photo",
-            media: fileId,
-            caption:
-              idx === 0
-                ? `📸 Homework pictures (${photos.length}) for <b>${item.subject}</b>`
-                : "",
-            parse_mode: "HTML",
-          }));
-
-          await bot.api.sendMediaGroup(GROUP_CHAT_ID, mediaGroup);
-        } catch (err) {
-          console.error(`Failed to send media group for ${item.subject}:`, err);
-        }
-      }
-    }
-  } catch (err) {
-    console.error("Failed to send daily reminder:", err);
-  }
-}
 
 // Strips matched subject words and group tags from the start of the homework text
 function extractHomeworkText(cleanText, matchedSubject) {
@@ -746,7 +659,6 @@ bot.on("message:photo", async (ctx, next) => {
     return next();
   }
 });
-
 // -------------------------------------------------------------
 // DAILY AUTOMATED REMINDER (Case-Insensitive & Space-Trimmed)
 // -------------------------------------------------------------
