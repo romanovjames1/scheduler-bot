@@ -662,6 +662,48 @@ bot.on("message:photo", async (ctx, next) => {
 // -------------------------------------------------------------
 // DAILY AUTOMATED REMINDER (Case-Insensitive & Space-Trimmed)
 // -------------------------------------------------------------
+
+// -------------------------------------------------------------
+// HELP COMMAND (/help & /adminhelp)
+// -------------------------------------------------------------
+bot.command(["help", "adminhelp"], async (ctx) => {
+  if (!isAdmin(ctx)) {
+    return ctx.reply(
+      "🤖 <b>University Timetable Bot</b>\n\n" +
+        "📌 <b>Public Commands:</b>\n" +
+        "• <code>/weekly</code> — View the full weekly schedule.\n\n" +
+        "<i>Daily schedule reminders post automatically every evening at 20:00!</i>",
+      { parse_mode: "HTML" },
+    );
+  }
+
+  const adminHelpText = `
+🛠️ <b>ADMIN BOT COMMANDS & GUIDE</b>
+
+📌 <b>1. Upload Timetable</b>
+• Attach schedule photo with caption: <code>/timetable</code>
+  <i>Gemini AI extracts schedule & automatically tags split groups like (G1) and (G2).</i>
+
+📝 <b>2. Assign Homework</b>
+• <b>Text + Photo:</b> Attach photo with caption:
+  <code>/homework Tech G1 Read pages 10-20</code>
+• <b>Text Only:</b> Send message:
+  <code>/homework Discrete Math Solve exercises 1 to 5</code>
+• <b>Photo Only (Preserve Text):</b> Attach photo with caption:
+  <code>/homework Tech G1</code>
+
+🖼️ <b>3. Manage Photos & Clean Up</b>
+• <code>/photos &lt;Subject&gt;</code> — View attached photos with <code>🗑️ Remove Photo</code> buttons.
+• <code>/clearhomework &lt;Subject&gt;</code> — Delete assigned text & photos for a subject.
+
+⚡ <b>4. Utilities</b>
+• <code>/weekly</code> — View the complete weekly schedule.
+• <code>/testreminder</code> — Immediately trigger tomorrow's daily reminder post.
+• <code>/debugdb</code> — Inspect raw JSON database stored in channel memory.
+`;
+
+  await ctx.reply(adminHelpText, { parse_mode: "HTML" });
+});
 async function sendTomorrowReminder() {
   const days = [
     "Sunday",
@@ -850,12 +892,13 @@ bot.command("clearhomework", async (ctx) => {
   );
 });
 
-// Daily Cron Job at 20:00 (8 PM)
-cron.schedule("0 20 * * *", () => {
-  console.log("Running daily reminder task...");
+// -------------------------------------------------------------
+// DAILY AUTOMATED REMINDER CRON JOB (Runs every day at 1:00 PM / 13:00)
+// -------------------------------------------------------------
+cron.schedule("0 13 * * *", () => {
+  console.log("Running daily reminder task for tomorrow's schedule...");
   sendTomorrowReminder();
 });
-
 bot.catch((err) => {
   const ctx = err.ctx;
   console.error(
